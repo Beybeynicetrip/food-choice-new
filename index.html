@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今天吃什么？ - Beybey定制版</title>
+    <style>
+        /* === 全局样式 === */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); /* 稍微暖一点的色调配合胡萝卜 */
+        }
+
+        /* === 1. 动态背景 === */
+        #bg-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            opacity: 0.3;
+        }
+
+        .art-text {
+            position: absolute;
+            white-space: nowrap;
+            user-select: none;
+            font-weight: bold;
+            filter: blur(1px);
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+
+        /* === 2. 主界面 === */
+        .container {
+            position: relative;
+            z-index: 10;
+            display: none; /* 初始隐藏，选完区域再显示 */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #333;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 40px;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        /* 转盘容器 */
+        .wheel-wrapper {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            box-shadow: 0 0 25px rgba(0,0,0,0.2);
+            border: 12px solid #fff;
+            background: #fff;
+        }
+
+        #wheelCanvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            transition: transform 4s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        .pointer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: #ff6b6b;
+            border-radius: 50%;
+            border: 4px solid #fff;
+            z-index: 20;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .pointer::before {
+            content: '';
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 0 15px 30px 15px;
+            border-style: solid;
+            border-color: transparent transparent #ff6b6b transparent;
+        }
+
+        /* === 3. 弹窗通用样式 (开局选择 & 结果) === */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-box {
+            background: #fff;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            max-width: 90%;
+            width: 400px;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* 开局选择框样式 */
+        select.region-select {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.2rem;
+            margin: 20px 0;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        select.region-select:focus {
+            border-color: #ff9f43;
+        }
+
+        button.primary-btn {
+            background: linear-gradient(to right, #ff9f43, #ff6b6b);
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+        button.primary-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.6);
+        }
+
+        /* 结果文字 */
+        .winner-text {
+            font-size: 2.5rem;
+            color: #ff6b6b;
+            font-weight: bold;
+            margin: 20px 0;
+            line-height: 1.2;
+        }
+
+        /* === 4. 底部署名 + 胡萝卜 === */
+        .footer {
+            position: fixed;
+            bottom: 15px;
+            right: 20px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 8px 15px;
+            border-radius: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-size: 0.9rem;
+            color: #555;
+            font-weight: bold;
+        }
+        
+        .carrot-icon {
+            width: 24px;
+            height: 24px;
+            margin-left: 8px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* 适配手机 */
+        @media (max-width: 600px) {
+            .wheel-wrapper {
+                width: 320px;
+                height: 320px;
+            }
+            h1 { font-size: 1.8rem; }
+            .modal-box { width: 85%; padding: 30px 20px; }
+            .footer { bottom: 10px; right: 50%; transform: translateX(50%); width: auto; white-space: nowrap; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 背景层 -->
+    <div id="bg-container"></div>
+
+    <!-- 1. 开局选择弹窗 -->
+    <div class="modal-overlay" id="startModal">
+        <div class="modal-box">
+            <h2 style="color: #333;">👋 嘿，今天在哪吃？</h2>
+            <p style="color: #666;">请先选择一个区域</p>
+            
+            <select id="regionSelect" class="region-select">
+                <option value="翔村东门">翔村东门</option>
+                <option value="厦门岛外">厦门岛外</option>
+                <option value="厦门岛内">厦门岛内</option>
+            </select>
+
+            <button class="primary-btn" onclick="initGame()">确认并开始</button>
+        </div>
+    </div>
+
+    <!-- 2. 主游戏界面 -->
+    <div class="container" id="gameContainer">
+        <h1 id="mainTitle">今天吃什么？</h1>
+        <div class="wheel-wrapper">
+            <canvas id="wheelCanvas" width="1000" height="1000"></canvas>
+            <div class="pointer" onclick="startSpin()">GO</div>
+        </div>
+    </div>
+
+    <!-- 3. 结果弹窗 -->
+    <div class="modal-overlay" id="resultModal" style="display: none;">
+        <div class="modal-box">
+            <h2 style="color: #333;">🥕 命中注定 🥕</h2>
+            <div class="winner-text" id="winnerText"></div>
+            <button class="primary-btn" onclick="closeResult()">这就去吃！</button>
+        </div>
+    </div>
+
+    <!-- 4. 底部开发人署名 -->
+    <div class="footer">
+        开发人：Beybey
+        <!-- 胡萝卜 SVG -->
+        <svg class="carrot-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 42 C16 42 8 20 26 8 C26 8 40 2 46 12 C46 12 54 26 48 42 C42 58 32 62 32 62 C32 62 22 58 16 42 Z" fill="#FF9F43"/>
+            <path d="M18 38 Q 28 45 38 36" stroke="#F38C2B" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M22 28 Q 30 34 38 26" stroke="#F38C2B" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M28 18 Q 34 22 40 16" stroke="#F38C2B" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M36 8 L 36 2 M 38 9 L 44 3 M 34 9 L 28 3" stroke="#2ECC71" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+    </div>
+
+    <script>
+        // ================= 数据配置 =================
+        
+        // 基础岛内名单 (35个)
+        const list_island_base = [
+            "延边双门洞·炭火烤肉", "羔羊地带", "盟重烧烤", "霸腹烤肉", "萍姐火锅", 
+            "老门框四季爆肚涮肉", "吴美丽贵州酸汤火锅", "八合里潮汕牛肉火锅", "202特色排挡", "闽和南",
+            "小埕戏·流水席", "好口味煎蟹馆", "钟意牛扒", "Ay Manuela西班牙餐厅", "静香House",
+            "欧登华德国餐厅", "HZ pizza", "Paradiso窑烤披萨", "THAI1949西泰料理", "Home Thai泰谣",
+            "韩正苑", "柏·居酒屋", "町禾", "上膳", "胖达的川菜馆",
+            "黄鹤天厨（莲花店）", "傲客夜厨", "九仙湖米粉小炒", "潮福城", "富悦轩",
+            "泰蒲", "朱富贵", "王呆呆", "老湘亲", "凯宾斯基自助"
+        ];
+
+        // 岛内新增 (4个)
+        const list_island_add = ["幻师", "王宝器洪文店", "味之绝", "万达御南门"];
+
+        // 完整的岛内名单 (合并)
+        const list_island_final = list_island_base.concat(list_island_add);
+
+        // 翔村东门名单
+        const list_xiangcun = [
+            "优面有范", "兰州拉面", "handin", "塔斯汀", "天九湾", "鸡公煲", "锅百亿", 
+            "贵州水城羊肉粉", "牛骨粉", "里脊肉饼", "江西炒粉", "一粒米", "老重庆小面", 
+            "河南烩面", "竞丰食堂一楼", "竞丰食堂二楼", "竞丰食堂三楼", "宏明臻水饺", 
+            "一家人东北菜", "江西小炒", "泰式嘎抛饭", "烤肉拌饭", "泰热餐厅", "美食街重庆小面"
+        ];
+
+        // 厦门岛外名单
+        const list_outside = [
+            "二龙撸串", "许保本烧烤自助", "吉拾串", "萍姐火锅", "天天潮汕牛肉火锅", 
+            "汕头牛基地鲜牛肉火锅", "海底捞", "欢夕·翔安府", "半菘", "临家闽南菜", 
+            "大厝宅", "六和居", "钦菜", "首尔山庄", "高丽洛", "韩庭", "阿善师羊肉炉", 
+            "恋恋沙茶面", "中山牛肉店", "Gudis谷地精酿", "达美乐"
+        ];
+
+        // 数据字典
+        const DATA_MAP = {
+            "翔村东门": list_xiangcun,
+            "厦门岛外": list_outside,
+            "厦门岛内": list_island_final
+        };
+
+        // 当前使用的名单
+        let currentList = [];
+
+        // 颜色配置
+        const colors = ['#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF', '#F78FB3', '#CF6A87', '#546DE5', '#E15F41'];
+
+        // 全局变量
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        let arc = 0;
+        let currentRotation = 0;
+        let isSpinning = false;
+
+        // ================= 初始化逻辑 =================
+
+        // 点击“确认并开始”
+        function initGame() {
+            const select = document.getElementById('regionSelect');
+            const region = select.value;
+            
+            // 1. 设置当前名单
+            currentList = DATA_MAP[region];
+            
+            // 2. 隐藏选择弹窗，显示游戏界面
+            document.getElementById('startModal').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'flex';
+
+            // 3. 更新标题（可选，如果想让标题也变的话）
+            // document.getElementById('mainTitle').innerText = region + " 吃什么？";
+
+            // 4. 初始化转盘
+            arc = 2 * Math.PI / currentList.length;
+            drawWheel();
+
+            // 5. 初始化背景（使用当前名单的词汇）
+            createBackground();
+        }
+
+        // ================= 绘图逻辑 =================
+
+        function drawWheel() {
+            const num = currentList.length;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = canvas.width / 2;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < num; i++) {
+                const angle = i * arc;
+                
+                // 绘制扇形
+                ctx.beginPath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, angle, angle + arc);
+                ctx.lineTo(centerX, centerY);
+                ctx.fill();
+
+                // 绘制文字
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(angle + arc / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 24px Microsoft YaHei";
+                
+                // 文字智能截断
+                let text = currentList[i];
+                // 根据名单长度动态调整截断，名单独越长，扇形越窄，字越要少
+                let limit = num > 30 ? 6 : 9; 
+                if (text.length > limit) {
+                    text = text.substring(0, limit) + "..";
+                }
+                
+                ctx.fillText(text, radius - 40, 10);
+                ctx.restore();
+            }
+        }
+
+        // ================= 交互逻辑 =================
+
+        function startSpin() {
+            if (isSpinning) return;
+            isSpinning = true;
+
+            const randomSpins = Math.floor(Math.random() * 5) + 5; // 5-10圈
+            const randomDegree = Math.floor(Math.random() * 360);
+            
+            const targetRotation = currentRotation + (randomSpins * 360) + randomDegree;
+            
+            canvas.style.transform = `rotate(${targetRotation}deg)`;
+            currentRotation = targetRotation;
+
+            setTimeout(() => {
+                isSpinning = false;
+                showResult(targetRotation);
+            }, 4000);
+        }
+
+        function showResult(rotation) {
+            const num = currentList.length;
+            const actualRotation = rotation % 360;
+            let degrees = 360 - actualRotation + 90; 
+            if (degrees >= 360) degrees -= 360;
+            
+            const index = Math.floor(degrees / (360 / num));
+            const winner = currentList[index];
+            
+            document.getElementById('winnerText').innerText = winner;
+            document.getElementById('resultModal').style.display = 'flex';
+        }
+
+        function closeResult() {
+            document.getElementById('resultModal').style.display = 'none';
+        }
+
+        // ================= 背景生成 =================
+        
+        function createBackground() {
+            const container = document.getElementById('bg-container');
+            container.innerHTML = ''; // 清空可能存在的旧背景
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            for (let i = 0; i < 40; i++) {
+                const span = document.createElement('span');
+                span.classList.add('art-text');
+                span.innerText = currentList[Math.floor(Math.random() * currentList.length)];
+                
+                const size = Math.floor(Math.random() * 25) + 14; 
+                const left = Math.floor(Math.random() * width);
+                const top = Math.floor(Math.random() * height);
+                const rot = Math.floor(Math.random() * 90) - 45;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+
+                span.style.fontSize = size + 'px';
+                span.style.left = left + 'px';
+                span.style.top = top + 'px';
+                span.style.transform = `rotate(${rot}deg)`;
+                span.style.color = color;
+                
+                span.style.animationDuration = (Math.random() * 10 + 15) + 's';
+                span.style.animationDelay = (Math.random() * 5) + 's';
+
+                container.appendChild(span);
+            }
+        }
+    </script>
+</body>
+</html>
