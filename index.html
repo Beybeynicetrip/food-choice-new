@@ -186,6 +186,27 @@
             line-height: 1.2;
         }
 
+        .winner-note {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: left;
+        }
+
+        .winner-note span {
+            display: inline-block;
+            margin-right: 10px;
+            background: #ffeaa7;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            color: #d63031;
+            font-weight: bold;
+        }
+
         /* === 4. 底部署名 + 胡萝卜 === */
         .footer {
             position: fixed;
@@ -262,6 +283,7 @@
         <div class="modal-box">
             <h2 style="color: #333;">🥕 命中注定 🥕</h2>
             <div class="winner-text" id="winnerText"></div>
+            <div class="winner-note" id="winnerNote" style="display: none;"></div>
             <button class="primary-btn" onclick="closeResult()">这就去吃！</button>
         </div>
     </div>
@@ -282,22 +304,69 @@
     <script>
         // ================= 数据配置 =================
         
-        // 基础岛内名单 (35个)
-        const list_island_base = [
-            "延边双门洞·炭火烤肉", "羔羊地带", "盟重烧烤", "霸腹烤肉", "萍姐火锅", 
-            "老门框四季爆肚涮肉", "吴美丽贵州酸汤火锅", "八合里潮汕牛肉火锅", "202特色排挡", "闽和南",
-            "小埕戏·流水席", "好口味煎蟹馆", "钟意牛扒", "Ay Manuela西班牙餐厅", "静香House",
-            "欧登华德国餐厅", "HZ pizza", "Paradiso窑烤披萨", "THAI1949西泰料理", "Home Thai泰谣",
-            "韩正苑", "柏·居酒屋", "町禾", "上膳", "胖达的川菜馆",
-            "黄鹤天厨（莲花店）", "傲客夜厨", "九仙湖米粉小炒", "潮福城", "富悦轩",
-            "泰蒲", "朱富贵", "王呆呆", "老湘亲", "凯宾斯基自助"
+        // 完整的岛内名单 (带分类与备注)
+        const list_island_final = [
+            {name: "延边双门洞·炭火烤肉", category: "烧烤", note: "韩式烤肉"},
+            {name: "星火桃园小王烧烤", category: "烧烤", note: "店铺环境一般的老牌烧烤店"},
+            {name: "盟重烧烤", category: "烧烤", note: "连锁店"},
+            {name: "霸腹烤肉", category: "烧烤", note: "排队人多，周一店休，工作日中午不开"},
+            {name: "萍姐火锅", category: "火锅", note: "宝龙店，群众反馈比翔安好吃点"},
+            {name: "老门框四季爆肚涮肉", category: "火锅", note: "爆肚涮羊肉，清真，首选湖里店"},
+            {name: "吴美丽贵州酸汤火锅", category: "火锅", note: "连锁店"},
+            {name: "八合里潮汕牛肉火锅", category: "火锅", note: "连锁店，思明校区访客中心有店"},
+            {name: "朱富贵", category: "火锅", note: "难排队"},
+            {name: "202特色排挡", category: "闽菜", note: "连锁店"},
+            {name: "闽和南", category: "闽菜", note: "连锁，泉州菜，商务风"},
+            {name: "小埕戏·流水席", category: "闽菜", note: "有海景"},
+            {name: "好口味煎蟹馆", category: "闽菜", note: "大表哥推荐，在集美"},
+            {name: "钟意牛扒", category: "西餐", note: "国贸中心店离翔安比较近，I人友好商场"},
+            {name: "Ay Manuela西班牙餐厅", category: "西餐", note: "特色海鲜饭，在酒吧一条街上"},
+            {name: "欧登华德国餐厅", category: "西餐", note: "周一不开，工作日中午不开"},
+            {name: "HZ pizza", category: "西餐", note: "万象城附近小店，推荐摩卡边"},
+            {name: "Paradiso窑烤披萨", category: "西餐", note: "思明校区附近"},
+            {name: "la pizza", category: "西餐", note: "星河cocopark，意面比pizza好吃"},
+            {name: "casamia", category: "西餐", note: "意餐"},
+            {name: "THAI1949西泰料理", category: "东南亚菜", note: "泰国菜T0级别，小贵"},
+            {name: "Home Thai泰谣", category: "东南亚菜", note: "泰国菜"},
+            {name: "韩正苑", category: "东南亚菜", note: "韩国菜，高峰期可能要拼桌"},
+            {name: "柏·居酒屋", category: "东南亚菜", note: "日料，提前预定"},
+            {name: "町禾", category: "东南亚菜", note: "集美的日料店，周边难停车"},
+            {name: "泰蒲", category: "东南亚菜", note: "泰国菜，性价比高"},
+            {name: "和莳小院", category: "东南亚菜", note: "日料"},
+            {name: "清叶", category: "东南亚菜", note: "贵价日料，环境好"},
+            {name: "叶太", category: "甜品", note: "千层蛋糕，岛内/集美"},
+            {name: "杨小贤", category: "甜品", note: "连锁，招牌芒果绵绵冰，烧仙草也不错"},
+            {name: "逢甲冰店", category: "甜品", note: "连锁，台湾风格"},
+            {name: "润霖甜品", category: "甜品", note: "连锁，思明校区附近有店"},
+            {name: "snowkiki拿破仑酥", category: "甜品", note: "无堂食，可小程序下单邮寄"},
+            {name: "芝夏西点", category: "甜品", note: "生日蛋糕，可小程序下单"},
+            {name: "ERRANCE", category: "甜品", note: "法式甜品蛋糕，贵+仪式感十足"},
+            {name: "still sweet/still bread", category: "甜品", note: "蛋糕/面包店"},
+            {name: "上膳", category: "中餐", note: "JFC店，烤鸭提前打电话预定"},
+            {name: "胖达的川菜馆", category: "中餐", note: "偏自贡盐帮菜"},
+            {name: "黄鹤天厨（莲花店）", category: "中餐", note: "泡椒田鸡"},
+            {name: "傲客夜厨", category: "中餐", note: "连锁店，闽南口味，招牌冻香螺"},
+            {name: "九仙湖米粉小炒", category: "中餐", note: "思明校区附近江西小炒店，化院二食堂"},
+            {name: "柴叔的灶", category: "中餐", note: "会展附近，特色沙焖菜"},
+            {name: "富悦轩", category: "中餐", note: "广式茶点"},
+            {name: "棠门", category: "中餐", note: "粤菜，环境好，招牌菜棠门十八斩"},
+            {name: "一刘汤包", category: "小吃", note: "同安总店，杏林园博苑附近有分店"},
+            {name: "钟丽君满煎糕", category: "小吃", note: "八市里面"},
+            {name: "阿杰五香", category: "小吃", note: "八市里面"},
+            {name: "莲欢海蛎煎", category: "小吃", note: "中山路，店比较旧"},
+            {name: "局口拌面", category: "小吃", note: "中山路，店比较旧"},
+            {name: "1980烧肉粽", category: "小吃", note: "中山路老字号"},
+            {name: "杨强芙蓉香骨鸡腿", category: "小吃", note: "同安店，口味略偏甜"},
+            {name: "天河西门土笋冻", category: "小吃", note: "中山公园附近"},
+            {name: "乌糖沙茶面", category: "沙茶面", note: "民族路，周边有碰瓷的店“乌堂”"},
+            {name: "四里沙茶面", category: "沙茶面", note: "分店多，任选"},
+            {name: "丽达轩", category: "沙茶面", note: "可以加扁食"},
+            {name: "Blues", category: "咖啡", note: "dirty好喝"},
+            {name: "BL Coffee & Bakery", category: "咖啡", note: ""},
+            {name: "两三松", category: "咖啡", note: "社区店，位置小，蛋糕不错"},
+            {name: "yukuri coffee", category: "咖啡", note: "不好找，特色拉花"},
+            {name: "敲门砖咖啡", category: "咖啡", note: "幸福路上，特色拉花"}
         ];
-
-        // 岛内新增 (4个)
-        const list_island_add = ["幻师", "王宝器洪文店", "味之绝", "万达御南门", "蔡记·九米羊肉炉"];
-
-        // 完整的岛内名单 (合并)
-        const list_island_final = list_island_base.concat(list_island_add);
 
         // 翔村东门名单
         const list_xiangcun = [
@@ -305,14 +374,35 @@
             "贵州水城羊肉粉", "牛骨粉", "里脊肉饼", "江西炒粉", "一粒米", "老重庆小面", 
             "河南烩面", "竞丰食堂一楼", "竞丰食堂二楼", "竞丰食堂三楼", "宏明臻水饺", 
             "一家人东北菜", "江西小炒", "泰式嘎抛饭", "烤肉拌饭", "泰热餐厅", "美食街重庆小面"
-        ];
+        ].map(name => ({name: name, category: "快餐", note: "翔村东门性价比首选"}));
 
         // 厦门岛外名单
         const list_outside = [
-            "二龙撸串", "许保本烧烤自助", "吉拾串", "萍姐火锅", "天天潮汕牛肉火锅", 
-            "汕头牛基地鲜牛肉火锅", "海底捞", "欢夕·翔安府", "半菘", "临家闽南菜", 
-            "大厝宅", "六和居", "钦菜", "首尔山庄", "高丽洛", "韩庭", "阿善师羊肉炉", 
-            "恋恋沙茶面", "中山牛肉店", "Gudis谷地精酿", "达美乐"
+            {name: "二龙撸串", category: "烧烤", note: "汇景广场对面"},
+            {name: "188烧烤", category: "烧烤", note: "店有点破"},
+            {name: "萍姐火锅", category: "火锅", note: "汇景广场"},
+            {name: "天天潮汕牛肉火锅", category: "火锅", note: "环境一般，主打性价比"},
+            {name: "汕头牛基地鲜牛肉火锅", category: "火锅", note: "厦航三六里街区"},
+            {name: "海底捞", category: "火锅", note: "闽篮城市广场"},
+            {name: "欢夕·翔安府", category: "闽菜", note: "厦航三六里街区"},
+            {name: "半菘", category: "闽菜", note: "汇景广场"},
+            {name: "临家闽南菜", category: "闽菜", note: "偏商务宴请，岛内有连锁店"},
+            {name: "大厝宅", category: "闽菜", note: "海鲜"},
+            {name: "六和居", category: "闽菜", note: "海鲜"},
+            {name: "钦菜", category: "闽菜", note: "偏商务宴请"},
+            {name: "首尔山庄", category: "韩国料理", note: "建议≥四人，比较好点菜"},
+            {name: "高丽洛", category: "韩国料理", note: "炸鸡"},
+            {name: "韩庭", category: "韩国料理", note: "小菜好吃"},
+            {name: "Kite纸鸢咖啡", category: "咖啡甜品", note: "厦航三六里街区"},
+            {name: "厦航小概率咖啡", category: "咖啡甜品", note: "厦航三六里街区"},
+            {name: "GaryKitchen加里", category: "咖啡甜品", note: "西餐轻食"},
+            {name: "大喜甜品", category: "咖啡甜品", note: "可订生日蛋糕"},
+            {name: "BRENCY百仑喜", category: "咖啡甜品", note: "有堂食，可订生日蛋糕"},
+            {name: "阿善师羊肉炉", category: "其他", note: "台湾菜"},
+            {name: "恋恋沙茶面", category: "其他", note: "老城区的小店"},
+            {name: "中山牛肉店", category: "其他", note: "比较隐蔽的小店，牛排含致死量的蒜，介意慎点"},
+            {name: "Gudis谷地精酿", category: "其他", note: "厦航三六里街区"},
+            {name: "唐记臻饺子", category: "其他", note: "饺子店"}
         ];
 
         // 数据字典
@@ -390,7 +480,7 @@
                 ctx.font = "bold 24px Microsoft YaHei";
                 
                 // 文字智能截断
-                let text = currentList[i];
+                let text = currentList[i].name;
                 // 根据名单长度动态调整截断，名单独越长，扇形越窄，字越要少
                 let limit = num > 30 ? 6 : 9; 
                 if (text.length > limit) {
@@ -431,7 +521,19 @@
             const index = Math.floor(degrees / (360 / num));
             const winner = currentList[index];
             
-            document.getElementById('winnerText').innerText = winner;
+            document.getElementById('winnerText').innerText = winner.name;
+            
+            const noteEl = document.getElementById('winnerNote');
+            if (winner.category || winner.note) {
+                let noteHtml = '';
+                if (winner.category) noteHtml += `<span>${winner.category}</span>`;
+                if (winner.note) noteHtml += winner.note;
+                noteEl.innerHTML = noteHtml;
+                noteEl.style.display = 'block';
+            } else {
+                noteEl.style.display = 'none';
+            }
+
             document.getElementById('resultModal').style.display = 'flex';
         }
 
@@ -450,7 +552,7 @@
             for (let i = 0; i < 40; i++) {
                 const span = document.createElement('span');
                 span.classList.add('art-text');
-                span.innerText = currentList[Math.floor(Math.random() * currentList.length)];
+                span.innerText = currentList[Math.floor(Math.random() * currentList.length)].name;
                 
                 const size = Math.floor(Math.random() * 25) + 14; 
                 const left = Math.floor(Math.random() * width);
