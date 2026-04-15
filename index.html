@@ -256,14 +256,21 @@
     <!-- 1. 开局选择弹窗 -->
     <div class="modal-overlay" id="startModal">
         <div class="modal-box">
-            <h2 style="color: #333;">👋 嘿，今天在哪吃？</h2>
-            <p style="color: #666;">请先选择一个区域</p>
+            <h2 style="color: #333;">👋 嘿，今天吃什么类型？</h2>
             
-            <select id="regionSelect" class="region-select">
-                <option value="翔村东门">翔村东门</option>
-                <option value="厦门岛外">厦门岛外</option>
-                <option value="厦门岛内">厦门岛内</option>
+            <select id="typeSelect" class="region-select" onchange="toggleRegionSelect()">
+                <option value="正餐">正餐</option>
+                <option value="非正餐">非正餐 (小吃/甜品/咖啡)</option>
             </select>
+
+            <div id="regionContainer">
+                <p style="color: #666; margin-top: 15px; margin-bottom: 5px;">请选择一个区域</p>
+                <select id="regionSelect" class="region-select" style="margin-top: 5px;">
+                    <option value="翔村东门">翔村东门</option>
+                    <option value="厦门岛外">厦门岛外</option>
+                    <option value="厦门岛内">厦门岛内</option>
+                </select>
+            </div>
 
             <button class="primary-btn" onclick="initGame()">确认并开始</button>
         </div>
@@ -406,12 +413,49 @@
             {name: "唐记臻饺子", category: "其他", note: "饺子店"}
         ];
 
-        // 数据字典
-        const DATA_MAP = {
-            "翔村东门": list_xiangcun,
-            "厦门岛外": list_outside,
-            "厦门岛内": list_island_final
-        };
+        // 处理正餐和非正餐的分类
+        const non_main_meal_categories = ["小吃", "甜品", "咖啡", "咖啡甜品"];
+        
+        let DATA_MAP_MAIN = {};
+        let list_non_main = [];
+
+        function processData() {
+            let island_main = [];
+            list_island_final.forEach(item => {
+                if (non_main_meal_categories.includes(item.category)) {
+                    list_non_main.push({...item, note: (item.note ? item.note + " " : "") + "[厦门岛内]"});
+                } else {
+                    island_main.push(item);
+                }
+            });
+
+            let outside_main = [];
+            list_outside.forEach(item => {
+                if (non_main_meal_categories.includes(item.category)) {
+                    list_non_main.push({...item, note: (item.note ? item.note + " " : "") + "[厦门岛外]"});
+                } else {
+                    outside_main.push(item);
+                }
+            });
+
+            DATA_MAP_MAIN = {
+                "翔村东门": list_xiangcun,
+                "厦门岛外": outside_main,
+                "厦门岛内": island_main
+            };
+        }
+        processData();
+
+        // 切换下拉框显示隐藏
+        function toggleRegionSelect() {
+            const typeSelect = document.getElementById('typeSelect').value;
+            const regionContainer = document.getElementById('regionContainer');
+            if (typeSelect === '正餐') {
+                regionContainer.style.display = 'block';
+            } else {
+                regionContainer.style.display = 'none';
+            }
+        }
 
         // 当前使用的名单
         let currentList = [];
@@ -430,11 +474,16 @@
 
         // 点击“确认并开始”
         function initGame() {
+            const typeSelect = document.getElementById('typeSelect').value;
             const select = document.getElementById('regionSelect');
             const region = select.value;
             
             // 1. 设置当前名单
-            currentList = DATA_MAP[region];
+            if (typeSelect === '正餐') {
+                currentList = DATA_MAP_MAIN[region];
+            } else {
+                currentList = list_non_main;
+            }
             
             // 2. 隐藏选择弹窗，显示游戏界面
             document.getElementById('startModal').style.display = 'none';
