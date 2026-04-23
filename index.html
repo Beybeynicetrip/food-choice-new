@@ -469,6 +469,7 @@
         let arc = 0;
         let currentRotation = 0;
         let isSpinning = false;
+        let pickedIndices = new Set();
 
         // ================= 初始化逻辑 =================
 
@@ -485,6 +486,8 @@
                 currentList = list_non_main;
             }
             
+            pickedIndices.clear(); // 清空抽取历史记录
+
             // 2. 隐藏选择弹窗，显示游戏界面
             document.getElementById('startModal').style.display = 'none';
             document.getElementById('gameContainer').style.display = 'flex';
@@ -548,8 +551,32 @@
             if (isSpinning) return;
             isSpinning = true;
 
+            const num = currentList.length;
+
+            // 如果全部抽过了，重置记录开启新一轮
+            if (pickedIndices.size >= num) {
+                pickedIndices.clear();
+            }
+
             const randomSpins = Math.floor(Math.random() * 5) + 5; // 5-10圈
-            const randomDegree = Math.floor(Math.random() * 360);
+            let randomDegree;
+            let targetIndex;
+
+            // 循环预判，直到算出这个角度指向的 index 没有被抽中过
+            do {
+                randomDegree = Math.floor(Math.random() * 360);
+                const projectedRotation = currentRotation + (randomSpins * 360) + randomDegree;
+                
+                // 逆推最终停落的 index
+                const actualRotation = projectedRotation % 360;
+                let degrees = 360 - actualRotation + 90; 
+                if (degrees >= 360) degrees -= 360;
+                
+                targetIndex = Math.floor(degrees / (360 / num));
+            } while (pickedIndices.has(targetIndex));
+
+            // 将此次不重复的 index 记录到 Set
+            pickedIndices.add(targetIndex);
             
             const targetRotation = currentRotation + (randomSpins * 360) + randomDegree;
             
